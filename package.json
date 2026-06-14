@@ -1,0 +1,26 @@
+{
+  "name": "pandit-ji-platform",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "mysql2": "^3.22.5",
+    "next": "^16.2.9",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "zod": "3.25.56"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.29",
+    "@types/react": "19.0.12",
+    "@types/react-dom": "19.0.4",
+    "eslint": "9.28.0",
+    "eslint-config-next": "^16.2.9",
+    "typescript": "5.8.3"
+  }
+}
