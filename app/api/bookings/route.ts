@@ -15,6 +15,7 @@ export async function POST(request: Request) {
   const parsed = bookingRequestSchema.safeParse(body);
 
   if (!parsed.success) {
+    console.error("Booking validation failed:", parsed.error.flatten());
     return NextResponse.json(
       {
         error: "Invalid booking details",

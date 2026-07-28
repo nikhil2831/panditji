@@ -5,4 +5,6 @@ export type PoojaService = {
   durationMinutes: number;
   startingPrice: number;
   samagriIncluded: boolean;
+  image?: string;
+  features?: string[];
 };

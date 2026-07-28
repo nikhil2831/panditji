@@ -47,17 +47,33 @@ export function BookingForm({ services }: BookingFormProps) {
       });
 
       if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}));
+        console.error("Booking submission error details:", errBody);
+        if (errBody.details?.fieldErrors) {
+          console.error("Validation Field Errors:", errBody.details.fieldErrors);
+        }
+        
+        let errMsg = "We could not process your request. Please check the entries and try again.";
+        if (errBody.details?.fieldErrors) {
+          const messages = Object.entries(errBody.details.fieldErrors)
+            .map(([field, errors]) => `${field}: ${(errors as string[]).join(", ")}`)
+            .join("\n");
+          if (messages) {
+            errMsg = `Validation errors:\n${messages}`;
+          }
+        }
+
         setState("error");
-        showToast("Request fail ho gayi. Kripya details check karke dobara try karein.", "error");
+        showToast(errMsg, "error");
         return;
       }
 
       form.reset();
       setState("success");
-      showToast("Aapki Pooja Booking Request successfully receive ho gayi hai!", "success");
+      showToast("Your request has been successfully registered! We will contact you soon.", "success");
     } catch (err) {
       setState("error");
-      showToast("Server connection error. Kripya internet connection check karein.", "error");
+      showToast("Server connection error. Please check your internet connection and try again.", "error");
     } finally {
       // Re-enable after submitting
       setTimeout(() => setState("idle"), 1000);
@@ -67,110 +83,175 @@ export function BookingForm({ services }: BookingFormProps) {
   return (
     <>
       {/* Toast container */}
-      <div className="toast-container" role="alert" aria-live="assertive">
+      <div className="fixed top-6 right-6 z-[10000] w-[400px] max-w-[calc(100vw-48px)] flex flex-col gap-3 pointer-events-none font-sans font-devanagari" role="alert" aria-live="assertive">
         {toasts.map((t) => (
-          <div key={t.id} className={`toast toast-${t.type}`}>
-            <div className="toast-icon">
+          <div 
+            key={t.id} 
+            className={`pointer-events-auto bg-white/95 backdrop-blur-md border border-saffron/15 rounded-xl p-4 flex items-start gap-3.5 shadow-lg relative overflow-hidden animate-[toastSlideIn_0.35s_cubic-bezier(0.16,1,0.3,1)_forwards] border-l-5 ${
+              t.type === "success" ? "border-l-emerald-500" : "border-l-rose-500"
+            }`}
+          >
+            <div className={`w-6 h-6 rounded-full grid place-items-center shrink-0 ${
+              t.type === "success" ? "bg-emerald-50 text-emerald-500" : "bg-rose-50 text-rose-500"
+            }`}>
               {t.type === "success" ? (
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
               ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
               )}
             </div>
-            <div className="toast-content">
-              <div className="toast-title">{t.type === "success" ? "Subh Shuruat!" : "Aparadh / Error"}</div>
-              <div className="toast-message">{t.message}</div>
+            <div className="flex-grow">
+              <div className="font-extrabold text-sm text-[#211818] mb-0.5">{t.type === "success" ? "Success!" : "Error"}</div>
+              <div className="text-xs text-[#62554e] leading-relaxed whitespace-pre-line">{t.message}</div>
             </div>
             <button
+              suppressHydrationWarning
               type="button"
-              className="toast-close"
+              className="bg-transparent border-none cursor-pointer text-[#62554e] opacity-50 hover:opacity-100 transition-opacity p-0.5"
               onClick={() => setToasts((prev) => prev.filter((item) => item.id !== t.id))}
               aria-label="Close"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
-            <div className="toast-progress"></div>
+            <div className={`absolute bottom-0 left-0 h-[3px] w-full origin-left animate-[toastCountdown_4s_linear_forwards] ${
+              t.type === "success" ? "bg-emerald-500" : "bg-rose-500"
+            }`}></div>
           </div>
         ))}
       </div>
 
-      <form className="form form-premium" onSubmit={handleSubmit}>
-        <div className="form-grid">
-          <div className="field">
-            <label htmlFor="name">Full name</label>
-            <div className="input-wrapper">
-              <span className="input-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              </span>
-              <input id="name" name="name" required placeholder="Rahul Sharma" disabled={state === "submitting"} />
-            </div>
+      <form className="glass-panel rounded-[2rem] p-6 sm:p-8 shadow-2xl relative overflow-hidden flex flex-col gap-5 font-sans text-white border border-white/10" onSubmit={handleSubmit}>
+        {/* Decorative subtle background gradient glows */}
+        <div className="absolute top-0 right-0 w-[150px] h-[150px] bg-saffron/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute bottom-0 left-0 w-[150px] h-[150px] bg-gold/5 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 w-full relative z-10">
+          {/* Name */}
+          <div className="flex flex-col gap-2">
+            <label className="text-[13px] font-bold tracking-wide text-white/90" htmlFor="name">Name</label>
+            <input 
+              suppressHydrationWarning
+              id="name" 
+              name="name" 
+              required 
+              placeholder="Enter your name" 
+              disabled={state === "submitting"} 
+              className="w-full border border-white/15 rounded-xl bg-obsidian/75 text-white text-[15px] py-4 px-4 transition-all duration-300 hover:border-saffron/40 focus:border-saffron focus:bg-obsidian/95 focus:ring-4 focus:ring-saffron/15 outline-none disabled:opacity-50"
+            />
           </div>
 
-          <div className="field">
-            <label htmlFor="phone">Phone</label>
-            <div className="input-wrapper">
-              <span className="input-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-              </span>
-              <input id="phone" name="phone" required placeholder="+91 98765 43210" disabled={state === "submitting"} />
-            </div>
+          {/* Phone */}
+          <div className="flex flex-col gap-2">
+            <label className="text-[13px] font-bold tracking-wide text-white/90" htmlFor="phone">Phone Number</label>
+            <input 
+              suppressHydrationWarning
+              id="phone" 
+              name="phone" 
+              required 
+              type="tel"
+              placeholder="Enter your phone number" 
+              disabled={state === "submitting"} 
+              className="w-full border border-white/15 rounded-xl bg-obsidian/75 text-white text-[15px] py-4 px-4 transition-all duration-300 hover:border-saffron/40 focus:border-saffron focus:bg-obsidian/95 focus:ring-4 focus:ring-saffron/15 outline-none disabled:opacity-50"
+            />
           </div>
 
-          <div className="field">
-            <label htmlFor="serviceId">Pooja</label>
-            <div className="input-wrapper">
-              <span className="input-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-              </span>
-              <select id="serviceId" name="serviceId" required defaultValue="" disabled={state === "submitting"}>
-                <option value="" disabled>
-                  Select service
+          {/* Preferred Date */}
+          <div className="flex flex-col gap-2">
+            <label className="text-[13px] font-bold tracking-wide text-white/90" htmlFor="preferredDate">Date</label>
+            <input 
+              suppressHydrationWarning
+              id="preferredDate" 
+              name="preferredDate" 
+              required 
+              type="date" 
+              disabled={state === "submitting"} 
+              className="w-full border border-white/15 rounded-xl bg-obsidian/75 text-[#8a7f77] focus:text-white text-[15px] py-4 px-4 transition-all duration-300 hover:border-saffron/40 focus:border-saffron focus:bg-obsidian/95 focus:ring-4 focus:ring-saffron/15 outline-none disabled:opacity-50 [color-scheme:dark] cursor-pointer"
+            />
+          </div>
+
+          {/* Pooja Service Dropdown */}
+          <div className="flex flex-col gap-2">
+            <label className="text-[13px] font-bold tracking-wide text-white/90" htmlFor="serviceId">Service</label>
+            <div className="relative flex items-center group w-full">
+              <select 
+                suppressHydrationWarning
+                id="serviceId" 
+                name="serviceId" 
+                required 
+                defaultValue="" 
+                disabled={state === "submitting"}
+                className="w-full border border-white/15 rounded-xl bg-obsidian/75 text-white text-[15px] py-4 px-4 pr-10 transition-all duration-300 hover:border-saffron/40 focus:border-saffron focus:bg-obsidian/95 focus:ring-4 focus:ring-saffron/15 outline-none disabled:opacity-50 appearance-none cursor-pointer font-devanagari"
+              >
+                <option value="" disabled className="bg-[#150f0d] text-white/60 font-sans">
+                  Select service / katha / consultation...
                 </option>
                 {services.map((service) => (
-                  <option key={service.id} value={service.id}>
+                  <option key={service.id} value={service.id} className="bg-[#150f0d] text-white">
                     {service.name}
                   </option>
                 ))}
               </select>
-              <span className="select-chevron-wrapper">
-                <svg className="select-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              <span className="absolute right-4 text-[#8a7f77] pointer-events-none flex items-center transition-colors duration-200 group-focus-within:text-saffron">
+                <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6"/></svg>
               </span>
             </div>
           </div>
 
-          <div className="field">
-            <label htmlFor="preferredDate">Preferred date</label>
-            <div className="input-wrapper">
-              <span className="input-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-              </span>
-              <input id="preferredDate" name="preferredDate" required type="date" disabled={state === "submitting"} />
-            </div>
-          </div>
-
-          <div className="field field-full">
-            <label htmlFor="address">Address</label>
-            <div className="input-wrapper align-start">
-              <span className="input-icon icon-top">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-              </span>
-              <textarea id="address" name="address" required placeholder="City, area, full address" disabled={state === "submitting"} />
-            </div>
+          {/* Address / Location */}
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <label className="text-[13px] font-bold tracking-wide text-white/90" htmlFor="address">Address</label>
+            <textarea 
+              suppressHydrationWarning
+              id="address" 
+              name="address" 
+              required 
+              placeholder="Enter your complete address" 
+              disabled={state === "submitting"} 
+              className="w-full border border-white/15 rounded-xl bg-obsidian/75 text-white text-[15px] py-4 px-4 min-h-[110px] resize-y transition-all duration-300 hover:border-saffron/40 focus:border-saffron focus:bg-obsidian/95 focus:ring-4 focus:ring-saffron/15 outline-none disabled:opacity-50"
+            />
           </div>
         </div>
 
-        <button className="button button-primary button-premium-submit" disabled={state === "submitting"} type="submit">
+        <button 
+          suppressHydrationWarning
+          className="w-full h-[58px] bg-gradient-to-r from-saffron to-vermilion hover:from-saffron-hover hover:to-vermilion text-white text-base font-bold tracking-wide rounded-xl shadow-[0_8px_24px_rgba(224,83,32,0.25)] mt-2 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_30px_rgba(224,83,32,0.5)] active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 cursor-pointer text-lg font-sans uppercase tracking-wider" 
+          disabled={state === "submitting"} 
+          type="submit"
+        >
           {state === "submitting" ? (
             <>
-              <svg className="spinner-icon animate-spin" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+              <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
               Sending Request...
             </>
           ) : (
-            "Send Booking Request"
+            <>
+              <span>Send Request</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </>
           )}
         </button>
+
+        {/* Divider */}
+        <div className="border-t border-white/10 my-1"></div>
+
+        {/* Highlights Row */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-1 text-[11px] sm:text-xs text-white/70 font-devanagari font-bold w-full text-center md:text-left">
+          <div className="cursor-default hover:text-white transition-colors duration-200">
+            <span>विश्वसनीय और अनुभवी आचार्य</span>
+          </div>
+          <div className="hidden md:block opacity-25 font-sans">•</div>
+          <div className="cursor-default hover:text-white transition-colors duration-200">
+            <span>विधि-विधान से संपन्न अनुष्ठान</span>
+          </div>
+          <div className="hidden md:block opacity-25 font-sans">•</div>
+          <div className="cursor-default hover:text-white transition-colors duration-200">
+            <span>आपकी संतुष्टि हमारी प्राथमिकता</span>
+          </div>
+        </div>
       </form>
     </>
   );
 }
-
