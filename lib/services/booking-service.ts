@@ -24,18 +24,20 @@ export async function createBooking(input: BookingRequestInput): Promise<Booking
     console.error("Failed to fetch service name for email:", err);
   }
 
-  // Send email notification asynchronously (non-blocking)
-  sendBookingNotificationEmail({
-    bookingId: id,
-    name: input.name,
-    phone: input.phone,
-    serviceName,
-    preferredDate: input.preferredDate,
-    address: input.address,
-    createdAt,
-  }).catch((err) => {
+  // Send email notification (awaited to prevent early termination in serverless environments)
+  try {
+    await sendBookingNotificationEmail({
+      bookingId: id,
+      name: input.name,
+      phone: input.phone,
+      serviceName,
+      preferredDate: input.preferredDate,
+      address: input.address,
+      createdAt,
+    });
+  } catch (err) {
     console.error("Failed to send booking notification email:", err);
-  });
+  }
 
   return {
     id,

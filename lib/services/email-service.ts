@@ -22,6 +22,15 @@ export interface SendBookingEmailInput {
 
 export async function sendBookingNotificationEmail(input: SendBookingEmailInput) {
   const adminEmail = process.env.NOTIFICATION_EMAIL || process.env.SMTP_USER;
+  
+  console.log("SMTP Debug Info:", {
+    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    port: process.env.SMTP_PORT || "587",
+    hasUser: !!process.env.SMTP_USER,
+    hasPassword: !!process.env.SMTP_PASSWORD,
+    recipientEmail: adminEmail,
+  });
+
   if (!adminEmail) {
     console.warn("Notification recipient email is not set, skipping email notification");
     return;
